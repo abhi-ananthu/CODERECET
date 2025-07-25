@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "express": "^5.1.0",
-    "llamaindex": "^0.11.22"
+    "llamaindex": "^0.11.22",
+    "zod": "^3.25.76"
   }
 }
