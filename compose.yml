@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  agent:
+    build:
+      context: ./agent         # path to first Node.js app
+      dockerfile: dockerfile   # make sure Dockerfile exists in ./node1
+    container_name: agent
+    ports:
+      - "4000:4000"            # maps host 4001 to container 3000
+    env_file:
+      - ./agent/.env
+
+  discord:
+    build:
+      context: ./discord        # path to second Node.js app
+      dockerfile: dockerfile   # make sure Dockerfile exists in ./node2
+    container_name: discord
+    ports:
+      - "3030:3030"            # maps host 4002 to container 3000
+    env_file:
+      - ./agent/.env
+
+  webapp:
+    build:
+      context: ./webapp      # path to Next.js app codebase (with your Dockerfile)
+      dockerfile: dockerfile
+    container_name: webapp
+    ports:
+      - "3000:3000"            # host 3000 to container 3000 (standard for Next.js)
+    env_file:
+      - ./agent/.env
