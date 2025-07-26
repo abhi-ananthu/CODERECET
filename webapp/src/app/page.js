@@ -1,9 +1,13 @@
 import React from 'react';
 import Link from "next/link";
 import Home from "./components/Home";
+import Navbar from "./components/Navbar";
 const HomePage = () => {
   return (
-	  <Home/>
+	  <>
+	     <Navbar />
+	     <Home />
+	  </>
      );
 };
 

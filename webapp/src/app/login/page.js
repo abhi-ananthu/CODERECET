@@ -1,18 +1,21 @@
-"use client"
+
+"use client";
+
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { AppRouter } from '@context/AppContext';
+import { useAppContext } from '@/context/AppContext'; // ✅ FIXED
+import Navbar from '@/app/components/Navbar'; // ✅ FIXED
 
 const LoginPage = () => {
-    const { setUser } = AppRouter();
+    const { setUser } = useAppContext(); // ✅ FIXED
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const router = useRouter();
 
     const handleLogin = async (e) => {
-        e.preventDefault(); // Prevent form reload
+        e.preventDefault();
 
         try {
             const response = await axios.post('http://localhost:4000/login', {
@@ -20,30 +23,28 @@ const LoginPage = () => {
                 password
             });
 
-            console.log("Login API response:", response.data); // Debug
-
             if (response.data && response.data.id) {
-                console.log("Login successful");
-		const userData = {
-			id: response.data.id,
-			name: username,
-		}
-		setUser(userData);
+                const userData = {
+                    id: response.data.id,
+                    name: username,
+                };
+
+                setUser(userData); // ✅ Save to context + localStorage
                 router.push(`/dashboard/${response.data.id}`);
             } else {
-                console.log("Login failed");
                 setMessage('Login failed. Please check your credentials.');
             }
         } catch (error) {
-            setMessage('An error occurred during login.');
             console.error(error);
+            setMessage('An error occurred during login.');
         }
-
     };
 
     return (
+	    <>
+	    <Navbar />
         <div className="min-h-screen flex items-center justify-center bg-[#DAD7B6] px-4">
-            <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md border border-[#545334]">
+            <div className="bg-white p-8 rounded-[20px] shadow-lg w-full max-w-md border border-[#545334]">
                 <h2 className="text-3xl font-bold text-center text-[#545334] mb-6">
                     Login to ConnectNGO
                 </h2>
@@ -91,12 +92,11 @@ const LoginPage = () => {
                     </p>
                 )}
 
-                <p className="mt-6 text-center text-sm text-[#545334]">
-                    © 2025 ConnectNGO. All rights reserved.
-                </p>
-            </div>
+                 </div>
         </div>
+	</>
     );
 };
 
 export default LoginPage;
+

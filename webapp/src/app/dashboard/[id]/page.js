@@ -1,9 +1,11 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '@/app/components/Navbar';
+import { useUser } from '../../../context/AppContext.js'; // adjust path as needed
 
 const mockTasks = [
     {
@@ -27,15 +29,14 @@ const mockTasks = [
 ];
 
 export default function Dashboard() {
+    const { user } = useUser(); // Get user from context
     const params = useParams();
     const id = params.id;
 
-    const [openId, setOpenId] = useState(null);
     const [branches, setBranches] = useState([]);
     const [selectedBranchPerTask, setSelectedBranchPerTask] = useState({});
     const [message, setMessage] = useState('');
 
-    // Fetch user branches from backend
     useEffect(() => {
         if (id) {
             axios.get(`http://localhost:4000/get-branches/${id}`)
@@ -52,11 +53,6 @@ export default function Dashboard() {
                 });
         }
     }, [id]);
-
-    const toggleAccordion = (taskId) => {
-        setOpenId(openId === taskId ? null : taskId);
-        setMessage('');
-    };
 
     const handleSelectChange = (taskId, value) => {
         setSelectedBranchPerTask({
@@ -83,59 +79,53 @@ export default function Dashboard() {
         <>
             <Navbar />
             <div className="min-h-screen bg-[#DAD7B6] px-6 py-8">
-                <h1 className="text-3xl md:text-4xl font-bold text-[#545334] mb-6 text-center">
-                    Welcome, User ID: {id}
+                <h1 className="text-4xl md:text-5xl font-bold text-[#545334] mb-10 text-center">
+	    Welcome to AidEra, {user?.name || 'User'}
                 </h1>
 
-                <div className="max-w-3xl mx-auto">
+                <div className="max-w-3xl mx-auto space-y-6">
                     {mockTasks.map((task) => (
-                        <div key={task.id} className="mb-4 border border-[#545334] rounded">
+                        <div
+                            key={task.id}
+                            className="bg-white/20 backdrop-blur-[50px] rounded-lg shadow-md p-6"
+                        >
+                            <h2 className="text-3xl font-bold text-[#545334] mb-2">{task.title}</h2>
+                            <p className="text-[#545334] mb-4">{task.description}</p>
+
+                            {branches.length > 0 ? (
+                                <>
+                                    <label className="block mb-2 font-large text-[#545334]">
+                                        Assign to:
+                                    </label>
+                                    <select
+                                        className="border border-[#545334] px-3 py-2 rounded w-full mb-4 text-[#545334]"
+                                        value={selectedBranchPerTask[task.id] || ''}
+                                        onChange={(e) => handleSelectChange(task.id, e.target.value)}
+                                    >
+                                        {branches.map((branch, idx) => (
+                                            <option key={idx} value={branch}>
+                                                {branch}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </>
+                            ) : (
+                                <p className="text-sm text-red-600 mb-4">
+                                    No branches available.
+                                </p>
+                            )}
+			  <div className="flex justify-center">
                             <button
-                                className="w-full text-left px-4 py-3 bg-[#545334] text-[#DAD7B6] font-semibold focus:outline-none"
-                                onClick={() => toggleAccordion(task.id)}
+                                onClick={() => handleSubmit(task.id)}
+                                className="bg-[#822B00] text-[#DAD7B6] px-4 py-2 rounded hover:bg-[#E78587] transition m-auto"
                             >
-                                {task.title}
+                                Submit
                             </button>
 
-                            {openId === task.id && (
-                                <div className="bg-[#f4f2df] px-4 py-4 text-[#545334]">
-                                    <p className="mb-3">{task.description}</p>
-
-                                    {branches.length > 0 ? (
-                                        <>
-                                            <label className="block mb-1 font-medium">
-                                                Assign to:
-                                            </label>
-                                            <select
-                                                className="border border-[#545334] px-3 py-2 rounded w-full mb-3"
-                                                value={selectedBranchPerTask[task.id] || ''}
-                                                onChange={(e) => handleSelectChange(task.id, e.target.value)}
-                                            >
-                                                {branches.map((branch, idx) => (
-                                                    <option key={idx} value={branch}>
-                                                        {branch}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </>
-                                    ) : (
-                                        <p className="text-sm text-red-600 mb-3">
-                                            No branches available.
-                                        </p>
-                                    )}
-
-                                    <button
-                                        onClick={() => handleSubmit(task.id)}
-                                        className="bg-[#545334] text-[#DAD7B6] px-4 py-2 rounded hover:bg-[#434323] transition"
-                                    >
-                                        Submit
-                                    </button>
-
-                                    {message && (
-                                        <p className="mt-3 text-sm text-green-700">{message}</p>
-                                    )}
-                                </div>
+                            {message && (
+                                <p className="mt-3 text-lg text-green-700">{message}</p>
                             )}
+			  </div>
                         </div>
                     ))}
                 </div>
@@ -143,3 +133,4 @@ export default function Dashboard() {
         </>
     );
 }
+
