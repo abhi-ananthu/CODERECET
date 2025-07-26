@@ -21,14 +21,9 @@ const LoginPage = () => {
             console.log("Login API response:", response.data); // Debug
 
             if (response.data && response.data.id) {
-                const userId = response.data.id;
-                const userBranches = response.data.branches;
+                console.log("Login successful");
 
-
-                router.push({
-                    pathname: `/dashboard/${userId}`,
-                    query: { branches: JSON.stringify(userBranches) }
-                });
+                router.push(`/dashboard/${response.data.id}`);
             } else {
                 console.log("Login failed");
                 setMessage('Login failed. Please check your credentials.');

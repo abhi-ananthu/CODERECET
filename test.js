@@ -57,6 +57,21 @@ app.post("/submit", (req, res) => {
     return res.status(200).json({ message: "Assignment submitted successfully", submission });
 });
 
+// Get branches for a specific user by ID
+app.get("/get-branches/:id", (req, res) => {
+    const { id } = req.params;
+
+    // Convert string ID to number for comparison
+    const user = USERS.find((u) => u.id === parseInt(id));
+
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ branches: user.branches });
+});
+
+
 app.listen(PORT, () => {
     console.log(`Express server running on http://localhost:${PORT}`);
 });

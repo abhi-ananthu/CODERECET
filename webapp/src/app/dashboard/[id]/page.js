@@ -1,7 +1,7 @@
 'use client';
 
-import { useSearchParams, useParams } from 'next/navigation';
-import { useEffect, useState, useRef } from 'react';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Navbar from '@/app/components/Navbar';
 
@@ -10,82 +10,74 @@ const mockTasks = [
         id: 1,
         title: 'Distribute Food Packs',
         description: 'Coordinate with volunteers to distribute food to flood-affected areas.',
-        assignedTo: '',
+        assignedTo: ''
     },
     {
         id: 2,
         title: 'School Supply Drive',
         description: 'Collect and distribute school supplies to underprivileged children.',
-        assignedTo: '',
+        assignedTo: ''
     },
     {
         id: 3,
         title: 'Awareness Campaign',
         description: 'Organize an awareness campaign on child labor in your local community.',
-        assignedTo: '',
+        assignedTo: ''
     },
 ];
 
 export default function Dashboard() {
     const params = useParams();
-    const searchParams = useSearchParams();
-
     const id = params.id;
-    const [openId, setOpenId] = useState(null);
-    const [inputValues, setInputValues] = useState({});
-    const [message, setMessage] = useState('');
-    const [branches, setBranches] = useState([]);
-    const [selectedBranch, setSelectedBranch] = useState('');
-    const dropdownRef = useRef(null);
 
+    const [openId, setOpenId] = useState(null);
+    const [branches, setBranches] = useState([]);
+    const [selectedBranchPerTask, setSelectedBranchPerTask] = useState({});
+    const [message, setMessage] = useState('');
+
+    // Fetch user branches from backend
     useEffect(() => {
-        const branchParam = searchParams.get('branches');
-        if (branchParam) {
-            try {
-                const parsedBranches = JSON.parse(branchParam);
-                setBranches(parsedBranches);
-                setSelectedBranch(parsedBranches[0] || '');
-            } catch (e) {
-                console.error('Invalid branches in URL');
-            }
+        if (id) {
+            axios.get(`http://localhost:4000/get-branches/${id}`)
+                .then((res) => {
+                    setBranches(res.data.branches);
+                    const defaultBranchMap = {};
+                    mockTasks.forEach(task => {
+                        defaultBranchMap[task.id] = res.data.branches[0] || '';
+                    });
+                    setSelectedBranchPerTask(defaultBranchMap);
+                })
+                .catch(() => {
+                    setBranches([]);
+                });
         }
-    }, [searchParams]);
+    }, [id]);
 
     const toggleAccordion = (taskId) => {
         setOpenId(openId === taskId ? null : taskId);
         setMessage('');
     };
 
-    const handleChange = (taskId, value) => {
-        setInputValues({ ...inputValues, [taskId]: value });
+    const handleSelectChange = (taskId, value) => {
+        setSelectedBranchPerTask({
+            ...selectedBranchPerTask,
+            [taskId]: value
+        });
     };
 
     const handleSubmit = async (taskId) => {
         try {
             const res = await axios.post('http://localhost:4000/submit', {
                 username: id,
-                taskId,
-                assignedTo: inputValues[taskId],
+                taskId: taskId,
+                assignedTo: selectedBranchPerTask[taskId],
             });
 
             setMessage(res.data.message);
         } catch (err) {
-            setMessage(err.response?.data?.message || 'Error occurred');
+            setMessage(err.response?.data?.message || 'Submission failed');
         }
     };
-
-    // Close dropdown if clicked outside
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-                setOpenId(null);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => {
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, []);
 
     return (
         <>
@@ -109,37 +101,28 @@ export default function Dashboard() {
                                 <div className="bg-[#f4f2df] px-4 py-4 text-[#545334]">
                                     <p className="mb-3">{task.description}</p>
 
-                                    {/* Dropdown Input */}
-                                    <div className="relative mb-3" ref={dropdownRef}>
-                                        <input
-                                            type="text"
-                                            placeholder="Assign to..."
-                                            value={inputValues[task.id] || ''}
-                                            onChange={(e) => handleChange(task.id, e.target.value)}
-                                            onFocus={() => setOpenId(task.id)}
-                                            className="border border-[#545334] px-3 py-2 rounded w-full"
-                                        />
-
-                                        {branches.length > 0 && (
-                                            <ul className="absolute z-10 w-full bg-white border border-[#545334] rounded shadow mt-1 max-h-40 overflow-y-auto">
-                                                {branches
-                                                    .filter((branch) =>
-                                                        branch.toLowerCase().includes(
-                                                            (inputValues[task.id] || '').toLowerCase()
-                                                        )
-                                                    )
-                                                    .map((branch, index) => (
-                                                        <li
-                                                            key={index}
-                                                            onClick={() => handleChange(task.id, branch)}
-                                                            className="px-4 py-2 hover:bg-[#f0eadb] cursor-pointer text-[#545334]"
-                                                        >
-                                                            {branch}
-                                                        </li>
-                                                    ))}
-                                            </ul>
-                                        )}
-                                    </div>
+                                    {branches.length > 0 ? (
+                                        <>
+                                            <label className="block mb-1 font-medium">
+                                                Assign to:
+                                            </label>
+                                            <select
+                                                className="border border-[#545334] px-3 py-2 rounded w-full mb-3"
+                                                value={selectedBranchPerTask[task.id] || ''}
+                                                onChange={(e) => handleSelectChange(task.id, e.target.value)}
+                                            >
+                                                {branches.map((branch, idx) => (
+                                                    <option key={idx} value={branch}>
+                                                        {branch}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-red-600 mb-3">
+                                            No branches available.
+                                        </p>
+                                    )}
 
                                     <button
                                         onClick={() => handleSubmit(task.id)}
