@@ -7,18 +7,19 @@ import connectToDB from "./utils.js"
 // Assign(submit)
 
 
-export const getComplaintsByNGO = async (ngoName) => {
+export const getComplaintsByNGO = async (id) => {
+
     try {
         await connectToDB();
 
-        const ngo = await Organization.findOne({ name: ngoName });
+        const ngo = await Organization.findOne({ id: id });
         console.log(ngo.name);
         if (!ngo) {
             console.log("NGO not found");
             return;
         }
 
-        const complaints = await Complaint.find({ assignto: ngoName });
+        const complaints = await Complaint.find({ assignto: id });
 
 
 
@@ -28,14 +29,13 @@ export const getComplaintsByNGO = async (ngoName) => {
             console.log(`Complaints for "${ngo.name}":`, complaints);
         }
 
-        console.log(complaints.brief);
     } catch (error) {
         console.error("Error fetching complaints:", error);
     }
 };
 
 
-// await getComplaintsByNGO("Clean Future Foundation");
+// await getComplaintsByNGO(8);
 
 
 
@@ -63,18 +63,18 @@ export const login = async (email, password) => {
         console.error("Login error:", error);
     }
 };
-await login("contact@hopekerala.org", "hope123");
+// await login("contact@hopekerala.org", "hope123");
 
 
 
 
-export const getChaptersOfNGO = async (identifier) => {
+export const getChaptersOfNGO = async (id) => {
     try {
         await connectToDB();
 
 
         const ngo = await Organization.findOne({
-            name: identifier
+            id: id
         });
 
         if (!ngo) {
@@ -89,4 +89,32 @@ export const getChaptersOfNGO = async (identifier) => {
         return null;
     }
 };
-// getChaptersOfNGO("Life Savers India");
+// getChaptersOfNGO(4);
+
+export const assignChapter = async (userId, taskId, assignedTo) => {
+    try {
+        const res = await fetch('http://localhost:4000/assign-chapter', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: userId,
+                taskId,
+                assignedTo
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            throw new Error(data.message || 'Assignment failed');
+        }
+
+        console.log(data.message);
+        return data.message;
+    } catch (error) {
+        console.error('Assignment error:', error.message);
+        return error.message || 'Assignment failed';
+    }
+};
