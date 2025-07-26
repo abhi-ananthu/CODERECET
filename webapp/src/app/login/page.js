@@ -32,13 +32,14 @@ const LoginPage = () => {
 
             if (data) {
                 const userData = {
-                    email: data.email,
-                    name: data.name,
-                    context: data.context,
+                    email: data.user.email,
+                    name: data.user.name,
+                    id: data.user.id,
+                    context: data.user.context,
                 };
 
                 setUser(userData); // ✅ Save to context + localStorage
-                router.push(`/dashboard/${data.id}`);
+                router.push(`/dashboard/${data.user.id}`);
             } else {
                 setMessage('Login failed. Please check your credentials.');
             }

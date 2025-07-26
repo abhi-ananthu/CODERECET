@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import 'dotenv/config';
-import bcrypt from 'bcrypt'// Make sure this is present to load your .env file
+// import bcrypt from 'bcrypt'// Make sure this is present to load your .env file
 
 // --- All Schema Definitions ---
 
@@ -13,6 +13,10 @@ export const organizationSchema = new mongoose.Schema({
         required: true,
         unique: true,
         trim: true
+    },
+    id: {
+        type: Number,
+        required: true,
     },
     email: {
         type: String,
@@ -56,7 +60,7 @@ export const complaintSchema = new mongoose.Schema({
         default: null
     },
     assignto: {
-        type: String,
+        type: Number,
         required: true
     },
     location: {
@@ -71,16 +75,16 @@ export const complaintSchema = new mongoose.Schema({
     timestamps: true
 });
 
-organizationSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
-});
+// organizationSchema.pre('save', async function (next) {
+//     if (!this.isModified('password')) return next();
+//     this.password = await bcrypt.hash(this.password, 10);
+//     next();
+// });
 
 // 🔍 Compare password
-organizationSchema.methods.comparePassword = async function (candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password);
-};
+// organizationSchema.methods.comparePassword = async function (candidatePassword) {
+//     return await bcrypt.compare(candidatePassword, this.password);
+// };
 
 export const Complaint = mongoose.model('complaints', complaintSchema);
 
