@@ -281,9 +281,9 @@ client.on(Events.MessageCreate, async (msg) => {
       await msg.reply('Thank you for providing the details for your report. We will review it shortly.');
       reportStates.delete(userId); // Clear state after receiving details
     } else if (userMessageContent.toLowerCase() === 'cancel' && reportStates.has(userId)) {
-        // Allow user to cancel at any stage of the report process
-        reportStates.delete(userId);
-        await msg.reply('Report process cancelled.');
+      // Allow user to cancel at any stage of the report process
+      reportStates.delete(userId);
+      await msg.reply('Report process cancelled.');
     }
     return; // Important: return after handling DM to prevent falling through to mention logic
   }
