@@ -31,7 +31,7 @@ const pc = new Pinecone({
  *
  * @returns {Promise<void>} A promise that resolves when indexing is complete.
  */
-(async function indexMongoDBCollection() {
+async function indexMongoDBCollection() {
   let mongoClient;
   try {
     // 1. Connect to MongoDB
@@ -125,7 +125,7 @@ const pc = new Pinecone({
       console.log('MongoDB connection closed.');
     }
   }
-})();
+}
 
 /**
  * Performs a similarity search in Pinecone based on a user prompt.
@@ -136,11 +136,11 @@ const pc = new Pinecone({
  * @returns {Promise<object | null>} A Promise that resolves to the metadata object
  * of the most relevant document, or null if no sufficiently relevant match is found.
  */
-(async function SimiliaritySearch(prompt = 'Health care') {
+async function SimiliaritySearch(context) {
   try {
     // Generate embedding for the user's prompt
     console.log('Generating embedding for user prompt...');
-    const queryEmbedding = await embeddingsGenerator.embedQuery(prompt);
+    const queryEmbedding = await embeddingsGenerator.embedQuery(context);
 
     // Access the Pinecone index
     const index = pc.index(pineconeIndexName);
@@ -178,4 +178,6 @@ const pc = new Pinecone({
     console.error('Error during similarity search:', error);
   }
   return null; // Return null if no relevant match is found or an error occurs
-})();
+}
+
+module.exports = { indexMongoDBCollection, SimiliaritySearch };

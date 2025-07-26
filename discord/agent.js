@@ -3,10 +3,10 @@ require('dotenv').config();
 
 const {
   GoogleGenAI, // Changed import to GoogleGenAI
-  HarmCategory,
-  HarmBlockThreshold,
+  Type,
 } = require('@google/genai'); // Updated package import
 const { updateSession, getSession } = require('./db'); // Added getSession
+const { client } = require('./db-client');
 
 // Initialize GoogleGenAI with your API key
 const genAI = new GoogleGenAI(process.env.GOOGLE_API_KEY); // Pass API key here
@@ -23,6 +23,9 @@ const chatHistories = new Map();
  * @param {string} sessionid - The current session ID for the user.
  * @returns {Promise<string|Object>} - The bot's response as a string, or an error object.
  */
+
+const systemPrompt = `You're an AI agent helping citizens report issues and connect with NGOs. Greet, ask for a brief issue description, request consent to collect more info, then gather one detail at a time (name, age, location URL, photo). End by thanking them for their civic sense.`;
+
 const botModel = async (userId, input, sessionid) => {
   if (!userId || !input) {
     console.error('Missing userId or input for botModel.');
@@ -61,14 +64,8 @@ const botModel = async (userId, input, sessionid) => {
 
     // Get the generative model
     const model_chat = genAI.chats.create({
-      model: 'gemini-1.5-flash', // Using 1.5-flash for efficiency
-      systemInstruction: `You are a helpful Discord bot for hearing citizens' reports on social issues. Be considerate and empathetic.
-      Your main task is to ask relevant questions to gather information for a report.
-      Guide the user through these steps:
-      1. First ask for a short description of the issue.
-      2. Then, ask for any relevant photos or media (instruct them to use the /media command to upload files).
-      3. Finally, ask for the specific location related to the report (instruct them to use the /submit command with the location option, or describe it).
-      Encourage them to use the /submit command when all information is gathered.`,
+      model: 'gemini-2.5-flash', // Using 1.5-flash for efficiency
+      systemInstruction: systemPrompt,
       history: userHistory,
     });
 
@@ -84,9 +81,11 @@ const botModel = async (userId, input, sessionid) => {
     chatHistories.set(userId, updatedHistory);
 
     // Update session in DB
-    await updateSession(
-      { userId: userId, sessionid: sessionid },
-      { $set: { data: updatedHistory } } // Store the actual history array
+    console.log(
+      await updateSession(
+        { userId: userId, sessionid: sessionid },
+        { $set: { data: chatHistories } } // Store the actual history array
+      )
     );
 
     return responseText;
@@ -102,59 +101,28 @@ const botModel = async (userId, input, sessionid) => {
  * @param {string} sessionid - The current session ID for the user.
  * @returns {Promise<Object>} - A structured JSON object containing extracted report details.
  */
-const submitTool = async (userId, sessionid) => {
-  try {
-    // Retrieve the chat history from the database as the source of truth for submission
-    const sessionDoc = await getSession({
-      sessionid: sessionid,
-    });
-    const userHistory = sessionDoc && sessionDoc.data ? sessionDoc.data : [];
 
-    if (userHistory.length === 0) {
+const submitTool = async (userId, sessionid) => {
+  const db = client.db('ngo');
+  const collection = db.collection('complaints');
+  try {
+    const sessionDoc = await getSession({ userId, sessionid });
+
+    const userHistory =
+      sessionDoc && sessionDoc['data'][userId]
+        ? sessionDoc['data'][userId]
+        : [];
+
+    if (!userHistory.length) {
       return { error: 'No chat history found for this user to summarize.' };
     }
 
-    const response = await genAI.models.generateContent({
-      // Use getGenerativeModel directly
-      model: 'gemini-2.5-flash',
-      generationConfig: {
-        responseMimeType: 'application/json', // Crucial for structured output
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            brief: {
-              // Changed from issueDescription to brief for consistency with Complaint model
-              type: 'STRING',
-              description:
-                'A concise summary (max 150 words) of the social issue reported by the user, suitable for a database entry.',
-            },
-            title: {
-              // Added title field
-              type: 'STRING',
-              description:
-                'A short, descriptive title (max 10 words) for the reported issue.',
-            },
-            location: {
-              type: 'STRING',
-              description:
-                'The location provided by the user for the social issue. If not explicitly stated, infer from context (e.g., "Thiruvananthapuram, Kerala, India" if no other location is mentioned) or state "Not Provided".',
-            },
-            // Note: photosProvided is better handled by checking `submissionData` directly in index.js
-            // as the AI might not always correctly infer if photos were "provided" via /media command.
-          },
-          required: ['brief', 'title', 'location'], // Mark required fields
-        },
-      },
-      // No systemInstruction here as the prompt explicitly defines the task
-    });
-
-    // Construct the prompt using the entire chat history
     const contents = userHistory.map((entry) => ({
       role: entry.role,
-      parts: entry.parts.map((part) => ({ text: part.text })),
+      parts: entry.parts.map((part) => ({ text: part.text || '' })),
     }));
 
-    // Add a final instruction to extract the information
+    // Append final instruction
     contents.push({
       role: 'user',
       parts: [
@@ -164,17 +132,53 @@ const submitTool = async (userId, sessionid) => {
       ],
     });
 
-    const structuredOutput = JSON.parse(response.text);
+    // Call the model
+    const response = await genAI.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents,
+      config: {
+        systemInstruction:
+          "You are an json output parser. Your job is to convert incoming prompts to give json data. Do not use '```' json at the beginning of file or any other extra info.",
+      },
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.Object,
+          properties: {
+            title: {
+              type: Type.STRING,
+            },
+            mediaLink: {
+              type: Type.STRING,
+            },
+            location: {
+              type: Type.STRING,
+            },
+            brief: {
+              type: Type.STRING,
+            },
+          },
+        },
+      },
+    });
 
-    // Clear the in-memory history for this user after submission
+    let rawOutput = response.text;
+
+    // Remove surrounding triple backticks if they exist
+    if (rawOutput.startsWith('```json') && rawOutput.endsWith('```')) {
+      rawOutput = rawOutput.slice(7, -3).trim(); // Remove ```json at start and ``` at end
+    } else if (rawOutput.startsWith('```') && rawOutput.endsWith('```')) {
+      rawOutput = rawOutput.slice(3, -3).trim(); // Remove just ``` if not labeled as json
+    }
+
+    // Now parse
+    const structuredOutput = JSON.parse(rawOutput);
+
+    // Save to DB
     chatHistories.delete(userId);
-    // Also update the session in DB to clear history if you want a fresh start
-    await updateSession(
-      { userId: userId, sessionid: sessionid }, // Use sessionid for precise targeting
-      { $set: { data: [] } } // Clear history in DB after successful submission
-    );
+    const data = await collection.insertOne(structuredOutput);
 
-    return structuredOutput;
+    return data;
   } catch (error) {
     console.error('Error in submitTool:', error);
     return {
