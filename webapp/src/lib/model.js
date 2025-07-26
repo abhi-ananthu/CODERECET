@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import 'dotenv/config'; // Make sure this is present to load your .env file
+import 'dotenv/config';
+import bcrypt from 'bcrypt'// Make sure this is present to load your .env file
 
 // --- All Schema Definitions ---
 
@@ -12,6 +13,18 @@ export const organizationSchema = new mongoose.Schema({
         required: true,
         unique: true,
         trim: true
+    },
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        lowercase: true
+    },
+    password: {
+        type: String,
+        required: true,
+        minlength: 6
     },
     context: {
         type: String,
@@ -31,35 +44,45 @@ export const organizationSchema = new mongoose.Schema({
 });
 
 
-export const Organization = mongoose.model('NGOs', organizationSchema);
 
 
 export const complaintSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
-        trim: true,
-        minlength: 3
     },
     mediaLink: {
         type: String,
         default: null
     },
+    assignto: {
+        type: String,
+        required: true
+    },
     location: {
         type: String,
         required: true,
-        trim: true
     },
     brief: {
         type: String,
         required: true,
-        trim: true,
-        minlength: 10
     }
 }, {
     timestamps: true
 });
 
-export const Complaint = mongoose.model('Complaint', complaintSchema);
+organizationSchema.pre('save', async function (next) {
+    if (!this.isModified('password')) return next();
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+});
 
+// 🔍 Compare password
+organizationSchema.methods.comparePassword = async function (candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+};
+
+export const Complaint = mongoose.model('complaints', complaintSchema);
+
+export const Organization = mongoose.model('organizations', organizationSchema);
 

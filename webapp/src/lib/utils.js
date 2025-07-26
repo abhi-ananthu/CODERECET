@@ -1,4 +1,14 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import path from 'path';
+// Now define __dirname
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const envPath = path.resolve(__dirname, '../..', '.env');
+
+dotenv.config({ path: envPath });
 
 const conn = { isConnected: false };
 
@@ -21,4 +31,7 @@ const connectToDB = async () => {
     }
 };
 
-module.exports = connectToDB;
+connectToDB();
+export default connectToDB;
+// module.exports = connectToDB();
+
