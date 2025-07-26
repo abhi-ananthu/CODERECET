@@ -1,6 +1,7 @@
 import React from 'react';
 
 const HomePage = () => {
+	console.log("Hellooo");
   return (
     <div className="min-h-screen bg-[#DAD7B6] flex flex-col items-center justify-center px-6 py-12">
       <h1 className="text-4xl md:text-5xl font-bold text-[#545334] text-center mb-6">
