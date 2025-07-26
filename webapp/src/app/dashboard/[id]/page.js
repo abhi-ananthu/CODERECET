@@ -1,80 +1,97 @@
-
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { Suspense, useEffect, useState } from 'react';
 import Navbar from '@/app/components/Navbar';
-import { useUser } from '../../../context/AppContext.js'; // adjust path as needed
-
-const mockTasks = [
-    {
-        id: 1,
-        title: 'Distribute Food Packs',
-        description: 'Coordinate with volunteers to distribute food to flood-affected areas.',
-        assignedTo: ''
-    },
-    {
-        id: 2,
-        title: 'School Supply Drive',
-        description: 'Collect and distribute school supplies to underprivileged children.',
-        assignedTo: ''
-    },
-    {
-        id: 3,
-        title: 'Awareness Campaign',
-        description: 'Organize an awareness campaign on child labor in your local community.',
-        assignedTo: ''
-    },
-];
+import { useUser } from '../../../context/AppContext.js';
+import Image from 'next/image.js';
 
 export default function Dashboard() {
-    const { user } = useUser(); // Get user from context
-    const params = useParams();
-    const id = params.id;
+    const { user } = useUser();
+    const { id } = useParams();
 
-    const [branches, setBranches] = useState([]);
-    const [selectedBranchPerTask, setSelectedBranchPerTask] = useState({});
+    const [chapters, setChapters] = useState([]); // Replaces branches
+    const [complaints, setComplaints] = useState([]);
+    const [selectedChapter, setSelectedChapter] = useState({});
     const [message, setMessage] = useState('');
 
+    // Fetch complaints
     useEffect(() => {
-        if (id) {
-            axios.get(`http://localhost:4000/get-branches/${id}`)
-                .then((res) => {
-                    setBranches(res.data.branches);
-                    const defaultBranchMap = {};
-                    mockTasks.forEach(task => {
-                        defaultBranchMap[task.id] = res.data.branches[0] || '';
-                    });
-                    setSelectedBranchPerTask(defaultBranchMap);
-                })
-                .catch(() => {
-                    setBranches([]);
+        const fetchComplaints = async () => {
+            try {
+                const res = await fetch(`/api/get-complaints?id=${id}`);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message || 'Failed to fetch complaints');
+
+                setComplaints(data.complaints || []);
+
+                // Set default chapter for each complaint
+                const initialSelection = {};
+                (data.complaints || []).forEach(c => {
+                    initialSelection[c.id] = '';
                 });
-        }
+                setSelectedChapter(initialSelection);
+            } catch (err) {
+                console.error('Error fetching complaints:', err);
+                setComplaints([]);
+            }
+        };
+
+        if (id) fetchComplaints();
     }, [id]);
 
-    const handleSelectChange = (taskId, value) => {
-        setSelectedBranchPerTask({
-            ...selectedBranchPerTask,
-            [taskId]: value
-        });
+    // Fetch chapters (formerly branches)
+    useEffect(() => {
+        const fetchChapters = async () => {
+            try {
+                const res = await fetch(`/api/get-chapters?id=${id}`);
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message || 'Failed to fetch chapters');
+
+                setChapters(data.chapters || []);
+            } catch (err) {
+                console.error('Error fetching chapters:', err);
+                setChapters([]);
+            }
+        };
+
+        if (id) fetchChapters();
+    }, [id]);
+
+    const handleSelectChange = (complaintId, value) => {
+        setSelectedChapter(prev => ({
+            ...prev,
+            [complaintId]: value
+        }));
     };
 
-    const handleSubmit = async (taskId) => {
+    const handleSubmit = async (complaint) => {
         try {
-            const res = await axios.post('http://localhost:4000/submit', {
-                username: id,
-                taskId: taskId,
-                assignedTo: selectedBranchPerTask[taskId],
+            const res = await fetch('/api/submit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: complaint.title,
+                    brief: complaint.brief,
+                    image: complaint.mediaLink,
+                    location: complaint.location,
+                    ngoId: id,
+                    chapterName: selectedChapter[complaint.cno],
+                }),
             });
 
-            setMessage(res.data.message);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+
+            setMessage(`Complaint assigned: ${data.message}`);
         } catch (err) {
-            setMessage(err.response?.data?.message || 'Submission failed');
+            setMessage(err.message || 'Error submitting complaint');
         }
     };
-
 
 
     return (
@@ -86,55 +103,46 @@ export default function Dashboard() {
                 </h1>
 
                 <div className="max-w-3xl mx-auto space-y-6">
-                    {mockTasks.map((task) => (
-                        <div
-                            key={task.id}
-                            className="bg-white/20 backdrop-blur-[50px] rounded-lg shadow-md p-6"
-                        >
-                            <h2 className="text-3xl font-bold text-[#545334] mb-2">{task.title}</h2>
-                            <p className="text-[#545334] mb-4">{task.description}</p>
+                    {complaints.length === 0 ? (
+                        <p className="text-center text-gray-600">No complaints found.</p>
+                    ) : (
+                        complaints.map((complaint) => (
+                            <div key={complaint.cno} className="bg-white/20 backdrop-blur-[50px] rounded-lg shadow-md p-6">
+                                <h2 className="text-2xl font-bold text-[#545334] mb-2">{complaint.title}</h2>
+                                <p className="text-[#545334] mb-2">{complaint.brief}</p>
+                                <p className="text-[#545334] mb-2">{complaint.location}</p>
+                                {complaint.mediaLink && <>
+                                    <div>
+                                        <Image src={complaint.mediaLink} width={50} height={50} alt='Image' loading='lazy' className='w-[30vw] h-[30vh] m-auto' />
+                                    </div>
+                                </>}
 
-                            {branches.length > 0 ? (
-                                <>
-                                    <label className="block mb-2 font-large text-[#545334]">
-                                        Assign to:
-                                    </label>
-                                    <select
-                                        className="border border-[#545334] px-3 py-2 rounded w-full mb-4 text-[#545334]"
-                                        value={selectedBranchPerTask[task.id] || ''}
-                                        onChange={(e) => handleSelectChange(task.id, e.target.value)}
-                                    >
-                                        {branches.map((branch, idx) => (
-                                            <option key={idx} value={branch}>
-                                                {branch}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </>
-                            ) : (
-                                <p className="text-sm text-red-600 mb-4">
-                                    No branches available.
-                                </p>
-                            )}
-                            <div className="flex justify-center">
-                                <button
-                                    onClick={() => handleSubmit(task.id)}
-                                    className="bg-[#822B00] text-[#DAD7B6] px-4 py-2 rounded hover:bg-[#E78587] transition m-auto"
+                                <label className="block mb-2 text-[#545334]">Assign to Chapter:</label>
+                                <select
+                                    value={selectedChapter[complaint.cno] || ''}
+                                    onChange={(e) => handleSelectChange(complaint.cno, e.target.value)}
+                                    className="border border-[#545334] px-3 py-2 rounded w-full mb-4 text-[#545334]"
                                 >
-                                    Submit
+                                    <option value="">Select a chapter</option>
+                                    {chapters.map((chapter, index) => (
+                                        <option key={index} value={chapter}>
+                                            {chapter}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                <button
+                                    onClick={() => handleSubmit(complaint.cno)}
+                                    className="bg-[#822B00] text-[#DAD7B6] px-4 py-2 rounded hover:bg-[#E78587] transition"
+                                >
+                                    Assign
                                 </button>
-
-
-
-                                {message && (
-                                    <p className="mt-3 text-lg text-green-700">{message}</p>
-                                )}
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
+                    {message && <p className="text-center text-green-600 mt-4">{message}</p>}
                 </div>
             </div>
         </>
     );
 }
-

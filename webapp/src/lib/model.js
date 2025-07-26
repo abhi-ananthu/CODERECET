@@ -86,7 +86,6 @@ export const complaintSchema = new mongoose.Schema({
 //     return await bcrypt.compare(candidatePassword, this.password);
 // };
 
-export const Complaint = mongoose.model('complaints', complaintSchema);
-
-export const Organization = mongoose.model('organizations', organizationSchema);
+export const Complaint = mongoose.models.Complaint || mongoose.model('Complaint', complaintSchema);
+export const Organization = mongoose.models.Organization || mongoose.model('Organization', organizationSchema)
 
