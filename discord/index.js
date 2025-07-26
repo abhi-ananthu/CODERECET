@@ -237,12 +237,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
       const dmChannel = await user.createDM();
       await dmChannel.send(
         `Hello ${user.username}! You used the /report command. ` +
-        `Please answer the following questions to help us understand your report:\n\n` +
-        `1. What is the issue you are reporting? (Be specific)\n` +
-        `2. When did this issue occur? (Date and Time if possible)\n` +
-        `3. Who are the involved parties (users, channels, etc.)?\n` +
-        `4. Do you have any evidence (screenshots, links to messages, etc.)? If so, please describe or provide them.\n\n` +
-        `You can just reply to this DM with your answers.`
+          `Please answer the following questions to help us understand your report:\n\n` +
+          `1. What is the issue you are reporting? (Be specific)\n` +
+          `2. When did this issue occur? (Date and Time if possible)\n` +
+          `3. Who are the involved parties (users, channels, etc.)?\n` +
+          `4. Do you have any evidence (screenshots, links to messages, etc.)? If so, please describe or provide them.\n\n` +
+          `You can just reply to this DM with your answers.`
       );
       // Set user state to awaiting_report_details
       reportStates.set(userId, 'awaiting_report_details');
