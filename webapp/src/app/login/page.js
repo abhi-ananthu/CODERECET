@@ -2,8 +2,10 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+import { AppRouter } from '@context/AppContext';
 
 const LoginPage = () => {
+    const { setUser } = AppRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
@@ -22,7 +24,11 @@ const LoginPage = () => {
 
             if (response.data && response.data.id) {
                 console.log("Login successful");
-
+		const userData = {
+			id: response.data.id,
+			name: username,
+		}
+		setUser(userData);
                 router.push(`/dashboard/${response.data.id}`);
             } else {
                 console.log("Login failed");
