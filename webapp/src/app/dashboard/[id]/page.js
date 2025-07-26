@@ -75,12 +75,14 @@ export default function Dashboard() {
         }
     };
 
+
+
     return (
         <>
             <Navbar />
             <div className="min-h-screen bg-[#DAD7B6] px-6 py-8">
                 <h1 className="text-4xl md:text-5xl font-bold text-[#545334] mb-10 text-center">
-	    Welcome to AidEra, {user?.name || 'User'}
+                    Welcome to AidEra, {user?.name || 'User'}
                 </h1>
 
                 <div className="max-w-3xl mx-auto space-y-6">
@@ -114,18 +116,20 @@ export default function Dashboard() {
                                     No branches available.
                                 </p>
                             )}
-			  <div className="flex justify-center">
-                            <button
-                                onClick={() => handleSubmit(task.id)}
-                                className="bg-[#822B00] text-[#DAD7B6] px-4 py-2 rounded hover:bg-[#E78587] transition m-auto"
-                            >
-                                Submit
-                            </button>
+                            <div className="flex justify-center">
+                                <button
+                                    onClick={() => handleSubmit(task.id)}
+                                    className="bg-[#822B00] text-[#DAD7B6] px-4 py-2 rounded hover:bg-[#E78587] transition m-auto"
+                                >
+                                    Submit
+                                </button>
 
-                            {message && (
-                                <p className="mt-3 text-lg text-green-700">{message}</p>
-                            )}
-			  </div>
+
+
+                                {message && (
+                                    <p className="mt-3 text-lg text-green-700">{message}</p>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
