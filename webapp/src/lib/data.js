@@ -63,7 +63,7 @@ export const login = async (email, password) => {
         console.error("Login error:", error);
     }
 };
-// await login("contact@hopekerala.org", "hope123");
+await login("contact@hopekerala.org", "hope123");
 
 
 

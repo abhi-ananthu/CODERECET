@@ -18,19 +18,27 @@ const LoginPage = () => {
         e.preventDefault();
 
         try {
-            const response = await axios.post('http://localhost:4000/login', {
-                username,
-                password
+            const response = await fetch("/api/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: username,
+                    password: password,
+                }),
             });
+            const data = await response.json();
 
-            if (response.data && response.data.id) {
+            if (data) {
                 const userData = {
-                    id: response.data.id,
-                    name: username,
+                    email: data.email,
+                    name: data.name,
+                    context: data.context,
                 };
 
                 setUser(userData); // ✅ Save to context + localStorage
-                router.push(`/dashboard/${response.data.id}`);
+                router.push(`/dashboard/${data.id}`);
             } else {
                 setMessage('Login failed. Please check your credentials.');
             }
@@ -41,60 +49,61 @@ const LoginPage = () => {
     };
 
     return (
-	    <>
-	    <Navbar />
-        <div className="min-h-screen flex items-center justify-center bg-[#DAD7B6] px-4">
-            <div className="bg-white p-8 rounded-[20px] shadow-lg w-full max-w-md border border-[#545334]">
-                <h2 className="text-3xl font-bold text-center text-[#545334] mb-6">
-                    Login to ConnectNGO
-                </h2>
+        <>
+            <Navbar />
+            <div className="min-h-screen flex items-center justify-center bg-[#DAD7B6] px-4">
+                <div className="bg-white p-8 rounded-[20px] shadow-lg w-full max-w-md border border-[#545334]">
+                    <h2 className="text-3xl font-bold text-center text-[#545334] mb-6">
+                        Login to ConnectNGO
+                    </h2>
 
-                <form className="space-y-5" onSubmit={handleLogin}>
-                    <div>
-                        <label htmlFor="username" className="block text-[#545334] font-medium mb-1">
-                            Username
-                        </label>
-                        <input
-                            type="text"
-                            id="username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="w-full px-4 py-2 border border-[#545334] rounded-md bg-[#DAD7B6] text-[#545334] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[#545334]"
-                            placeholder="Enter your username"
-                        />
-                    </div>
+                    <form className="space-y-5" onSubmit={handleLogin}>
+                        <div>
+                            <label htmlFor="username" className="block text-[#545334] font-medium mb-1">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                id="username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full px-4 py-2 border border-[#545334] rounded-md bg-[#DAD7B6] text-[#545334] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[#545334]"
+                                placeholder="Enter your username"
+                            />
+                        </div>
 
-                    <div>
-                        <label htmlFor="password" className="block text-[#545334] font-medium mb-1">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            id="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-2 border border-[#545334] rounded-md bg-[#DAD7B6] text-[#545334] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[#545334]"
-                            placeholder="Enter your password"
-                        />
-                    </div>
+                        <div>
+                            <label htmlFor="password" className="block text-[#545334] font-medium mb-1">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                id="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-2 border border-[#545334] rounded-md bg-[#DAD7B6] text-[#545334] placeholder-[#888] focus:outline-none focus:ring-2 focus:ring-[#545334]"
+                                placeholder="Enter your password"
+                            />
+                        </div>
+                        <button
 
-                    <button
-                        type="submit"
-                        className="w-full bg-[#545334] text-[#DAD7B6] py-2 rounded-md text-lg font-medium hover:bg-[#434323] transition"
-                    >
-                        Login
-                    </button>
-                </form>
+                            type="submit"
+                            className="w-full bg-[#545334] text-[#DAD7B6] py-2 rounded-md text-lg font-medium hover:bg-[#434323] transition"
+                        >
+                            Login
+                        </button>
 
-                {message && (
-                    <p className="mt-4 text-center text-sm text-red-600 font-semibold">
-                        {message}
-                    </p>
-                )}
+                    </form>
 
-                 </div>
-        </div>
-	</>
+                    {message && (
+                        <p className="mt-4 text-center text-sm text-red-600 font-semibold">
+                            {message}
+                        </p>
+                    )}
+
+                </div>
+            </div>
+        </>
     );
 };
 

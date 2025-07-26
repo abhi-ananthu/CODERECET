@@ -31,7 +31,6 @@ const connectToDB = async () => {
     }
 };
 
-connectToDB();
 export default connectToDB;
 // module.exports = connectToDB();
 
