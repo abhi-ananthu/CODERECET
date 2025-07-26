@@ -63,7 +63,8 @@ const commands = [
   },
   {
     name: 'report',
-    description: 'Start a private report process with the bot (requires email verification).',
+    description:
+      'Start a private report process with the bot (requires email verification).',
   },
   {
     name: 'verify',
@@ -152,10 +153,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     // Generate a 6-digit verification code
-    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
     const expiryTime = Date.now() + 5 * 60 * 1000; // Code expires in 5 minutes
 
-    verificationCodes.set(userId, { email, code: verificationCode, timestamp: expiryTime });
+    verificationCodes.set(userId, {
+      email,
+      code: verificationCode,
+      timestamp: expiryTime,
+    });
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
@@ -174,7 +181,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } catch (error) {
       console.error(`Error sending verification email to ${email}:`, error);
       await interaction.editReply({
-        content: 'There was an error sending the verification email. Please check your email address and try again later. Ensure your bot\'s email credentials are correct.',
+        content:
+          "There was an error sending the verification email. Please check your email address and try again later. Ensure your bot's email credentials are correct.",
       });
       // Clean up the stored code if email sending fails
       verificationCodes.delete(userId);
@@ -187,7 +195,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (!storedVerification) {
       await interaction.reply({
-        content: 'No pending verification found for you. Please use `/verify <your_email>` first.',
+        content:
+          'No pending verification found for you. Please use `/verify <your_email>` first.',
         ephemeral: true,
       });
       return;
@@ -197,7 +206,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (Date.now() > storedVerification.timestamp) {
       verificationCodes.delete(userId); // Remove expired code
       await interaction.reply({
-        content: 'Your verification code has expired. Please use `/verify <your_email>` again to get a new code.',
+        content:
+          'Your verification code has expired. Please use `/verify <your_email>` again to get a new code.',
         ephemeral: true,
       });
       return;
@@ -207,13 +217,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
       verifiedUsers.add(userId); // Mark user as verified
       verificationCodes.delete(userId); // Remove the used code
       await interaction.reply({
-        content: '🎉 Your email has been successfully verified! You can now use the `/report` command.',
+        content:
+          '🎉 Your email has been successfully verified! You can now use the `/report` command.',
         ephemeral: true,
       });
       console.log(`User ${user.tag} (${userId}) successfully verified.`);
     } else {
       await interaction.reply({
-        content: 'Invalid verification code. Please try again or request a new code with `/verify <your_email>`.',
+        content:
+          'Invalid verification code. Please try again or request a new code with `/verify <your_email>`.',
         ephemeral: true,
       });
     }
@@ -223,7 +235,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
     // Check if the user is email verified
     if (!verifiedUsers.has(userId)) {
       await interaction.reply({
-        content: 'You must verify your email first to use the `/report` command. Please use `/verify <your_email>` to start the verification process.',
+        content:
+          'You must verify your email first to use the `/report` command. Please use `/verify <your_email>` to start the verification process.',
         ephemeral: true,
       });
       return;
@@ -248,19 +261,21 @@ client.on(Events.InteractionCreate, async (interaction) => {
       reportStates.set(userId, 'awaiting_report_details');
 
       await interaction.editReply({
-        content: "Please check your DMs! I've sent you some questions to gather more details for your report.",
+        content:
+          "Please check your DMs! I've sent you some questions to gather more details for your report.",
       });
-
     } catch (error) {
       console.error(`Error initiating report DM with ${user.tag}:`, error);
       // If deferReply was successful, use editReply; otherwise, use reply (though deferReply should ideally always succeed here)
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply({
-          content: 'There was an error starting your report process. Please ensure your DMs are open or try again later.',
+          content:
+            'There was an error starting your report process. Please ensure your DMs are open or try again later.',
         });
       } else {
         await interaction.reply({
-          content: 'There was an error starting your report process. Please ensure your DMs are open or try again later.',
+          content:
+            'There was an error starting your report process. Please ensure your DMs are open or try again later.',
           ephemeral: true,
         });
       }
@@ -275,7 +290,10 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
     if (attachment) {
       // Check if the attachment is an image (optional, but good for specific media handling)
-      if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+      if (
+        attachment.contentType &&
+        attachment.contentType.startsWith('image/')
+      ) {
         const imageUrl = attachment.url;
         console.log(`Received photo from ${user.tag}. Image URL: ${imageUrl}`);
         await interaction.editReply({
@@ -290,7 +308,8 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
     } else {
       await interaction.editReply({
-        content: 'No photo attachment found. Please attach a photo when using this command.',
+        content:
+          'No photo attachment found. Please attach a photo when using this command.',
         ephemeral: true,
       });
     }
@@ -308,18 +327,11 @@ client.on(Events.MessageCreate, async (msg) => {
     const userReportState = reportStates.get(userId);
     const userMessageContent = msg.content.trim();
 
-    // Now directly check if user is awaiting report details
-    if (userReportState === 'awaiting_report_details') {
-      // User is submitting report details
-      console.log(`Report details from ${msg.author.tag} (${userId}): ${userMessageContent}`);
-      await msg.reply('Thank you for providing the details for your report. We will review it shortly.');
-      reportStates.delete(userId); // Clear state after receiving details
-    } else if (userMessageContent.toLowerCase() === 'cancel' && reportStates.has(userId)) {
-      // Allow user to cancel at any stage of the report process
-      reportStates.delete(userId);
-      await msg.reply('Report process cancelled.');
-    }
-    return; // Important: return after handling DM to prevent falling through to mention logic
+    const response = await fetch(
+      `http://localhost:3030/discord/get-response?userId=${userId}&input=${userMessageContent}`
+    );
+
+    msg.reply(response.text());
   }
 
   // Original mention logic (only if not a DM)
