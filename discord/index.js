@@ -1,4 +1,3 @@
-// Require the necessary discord.js classes
 const {
   Client,
   Events,
@@ -18,14 +17,13 @@ dotenv.config();
 // Define your bot's token and client ID from .env
 const TOKEN = process.env.TOKEN;
 const CLIENT_ID = process.env.CLIENT_ID;
-const SECRET_WORD = process.env.SECRET_WORD; // New: Define your secret word in .env
+// SECRET_WORD is removed as per request
 
 // --- IMPORTANT: Add these to your .env file ---
 // TOKEN=YOUR_BOT_TOKEN_HERE
 // CLIENT_ID=YOUR_BOT_APPLICATION_ID_HERE
 // EMAIL_USER=YOUR_EMAIL_ADDRESS_FOR_SENDING_VERIFICATION_CODES (e.g., your_email@gmail.com)
 // EMAIL_PASS=YOUR_EMAIL_PASSWORD_OR_APP_PASSWORD (for Gmail, use an App Password)
-// SECRET_WORD=your_chosen_secret_word_here (e.g., "banana" or "securekey123")
 
 // Create a new client instance with necessary intents
 const client = new Client({
@@ -44,7 +42,8 @@ const verificationCodes = new Map(); // Stores { userId: { email, code, timestam
 const verifiedUsers = new Set(); // Stores userId of verified users
 
 // Stores the state of a user's report process in DMs
-const reportStates = new Map(); // Stores { userId: 'awaiting_secret_word' | 'awaiting_report_details' }
+// Now only tracks if a user is 'awaiting_report_details'
+const reportStates = new Map(); // Stores { userId: 'awaiting_report_details' }
 
 // --- Nodemailer Transporter Setup ---
 // Configure your email service. Example for Gmail:
@@ -64,7 +63,7 @@ const commands = [
   },
   {
     name: 'report',
-    description: 'Start a private report process with the bot (requires email and secret word verification).',
+    description: 'Start a private report process with the bot (requires email verification).',
   },
   {
     name: 'verify',
@@ -86,6 +85,19 @@ const commands = [
         name: 'code',
         type: ApplicationCommandOptionType.String,
         description: 'The verification code from your email.',
+        required: true,
+      },
+    ],
+  },
+  // --- NEW: /media command definition ---
+  {
+    name: 'media',
+    description: 'Upload a photo and get its link.',
+    options: [
+      {
+        name: 'photo',
+        type: ApplicationCommandOptionType.Attachment, // Use Attachment type for files
+        description: 'The photo you want to upload.',
         required: true,
       },
     ],
@@ -217,20 +229,26 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    // If email verified, initiate the secret word challenge in DM
+    // If email verified, directly send the report questions in DM
     try {
       // Defer the reply immediately to prevent interaction timeout
       await interaction.deferReply({ ephemeral: true });
 
       const dmChannel = await user.createDM();
       await dmChannel.send(
-        `Hello ${user.username}! To proceed with your report, please type the secret word.`
+        `Hello ${user.username}! You used the /report command. ` +
+        `Please answer the following questions to help us understand your report:\n\n` +
+        `1. What is the issue you are reporting? (Be specific)\n` +
+        `2. When did this issue occur? (Date and Time if possible)\n` +
+        `3. Who are the involved parties (users, channels, etc.)?\n` +
+        `4. Do you have any evidence (screenshots, links to messages, etc.)? If so, please describe or provide them.\n\n` +
+        `You can just reply to this DM with your answers.`
       );
-      // Set user state to awaiting_secret_word
-      reportStates.set(userId, 'awaiting_secret_word');
+      // Set user state to awaiting_report_details
+      reportStates.set(userId, 'awaiting_report_details');
 
       await interaction.editReply({
-        content: "Please check your DMs! I've sent you a challenge to proceed with your report.",
+        content: "Please check your DMs! I've sent you some questions to gather more details for your report.",
       });
 
     } catch (error) {
@@ -248,6 +266,35 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
     }
   }
+  // --- NEW: Handle /media command ---
+  else if (commandName === 'media') {
+    // Defer the reply immediately, as fetching attachment details is quick but good practice
+    await interaction.deferReply({ ephemeral: true });
+
+    const attachment = interaction.options.getAttachment('photo');
+
+    if (attachment) {
+      // Check if the attachment is an image (optional, but good for specific media handling)
+      if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+        const imageUrl = attachment.url;
+        console.log(`Received photo from ${user.tag}. Image URL: ${imageUrl}`);
+        await interaction.editReply({
+          content: `Thank you for the photo! I've processed the image link. (Check console for URL)`,
+          ephemeral: true,
+        });
+      } else {
+        await interaction.editReply({
+          content: 'The provided file is not an image. Please upload a photo.',
+          ephemeral: true,
+        });
+      }
+    } else {
+      await interaction.editReply({
+        content: 'No photo attachment found. Please attach a photo when using this command.',
+        ephemeral: true,
+      });
+    }
+  }
 });
 
 // --- messageCreate event handler (for bot mentions and DMs) ---
@@ -261,21 +308,8 @@ client.on(Events.MessageCreate, async (msg) => {
     const userReportState = reportStates.get(userId);
     const userMessageContent = msg.content.trim();
 
-    if (userReportState === 'awaiting_secret_word') {
-      if (userMessageContent === SECRET_WORD) {
-        reportStates.set(userId, 'awaiting_report_details'); // Move to next state
-        await msg.reply(
-          `That's correct! Now, please answer the following questions to help us understand your report:\n\n` +
-          `1. What is the issue you are reporting? (Be specific)\n` +
-          `2. When did this issue occur? (Date and Time if possible)\n` +
-          `3. Who are the involved parties (users, channels, etc.)?\n` +
-          `4. Do you have any evidence (screenshots, links to messages, etc.)? If so, please describe or provide them.\n\n` +
-          `You can just reply to this DM with your answers.`
-        );
-      } else {
-        await msg.reply('Incorrect secret word. Please try again or type `cancel` to stop the report process.');
-      }
-    } else if (userReportState === 'awaiting_report_details') {
+    // Now directly check if user is awaiting report details
+    if (userReportState === 'awaiting_report_details') {
       // User is submitting report details
       console.log(`Report details from ${msg.author.tag} (${userId}): ${userMessageContent}`);
       await msg.reply('Thank you for providing the details for your report. We will review it shortly.');
