@@ -17,22 +17,27 @@ const LoginPage = () => {
                 username,
                 password
             });
-            console.log(username, password);
-            // Assuming API returns { success: true, token: "..." }
-            if (response.data) {
-                console.log("done");
-                router.push(`/dashboard/${response.data.id}`)
-                // return res.status(200).json({ success: true, message: 'Login successful', user: user.username });
 
-                // Store token or navigate, as needed
+            console.log("Login API response:", response.data); // Debug
+
+            if (response.data && response.data.id) {
+                const userId = response.data.id;
+                const userBranches = response.data.branches;
+
+
+                router.push({
+                    pathname: `/dashboard/${userId}`,
+                    query: { branches: JSON.stringify(userBranches) }
+                });
             } else {
-                console.log("NOT DONE");
-
+                console.log("Login failed");
                 setMessage('Login failed. Please check your credentials.');
             }
         } catch (error) {
             setMessage('An error occurred during login.');
+            console.error(error);
         }
+
     };
 
     return (

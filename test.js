@@ -29,7 +29,7 @@ app.post("/login", (req, res) => {
     if (user) {
         return res
             .status(200)
-            .json({ message: "Login successful", user: user.username });
+            .json({ message: "Login successful", id: user.id, branches: user.branches });
     } else {
         return res.status(401).json({ message: "Invalid credentials" });
     }
